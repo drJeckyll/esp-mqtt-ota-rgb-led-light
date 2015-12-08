@@ -15,7 +15,7 @@ All topics can be adjusted via config/user_config.h
 
 ```
 MQTT_PREFIX"period" - for period
-MQTT_PREFIX         - for all colors & white
+MQTT_PREFIX"all"    - for all colors & white
 MQTT_PREFIX"colors" - for colors only
 MQTT_PREFIX"white"  - for white only
 MQTT_PREFIX"r"      - RED

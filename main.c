@@ -147,6 +147,7 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 	{
 		if (atoi(dataBuf) == 0)
 		{
+			sysCfg.power = 0;
 			_pwm_stop();
 			GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 0);
 			GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
@@ -154,6 +155,79 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 			GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 0);
 			GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 0);
 		} else {
+			sysCfg.power = 1;
+
+			uint32_t pwm = 0;
+
+			if (sysCfg.pwm_duty[LIGHT_RED] >= (int)(sysCfg.pwm_period * 1000 / 45))
+				GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 1);
+			else
+			if (sysCfg.pwm_duty[LIGHT_RED] == 0)
+				GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 0);
+			else {
+				pwm = 1;
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_RED], LIGHT_RED);
+			}
+
+			if (sysCfg.pwm_duty[LIGHT_GREEN] >= (int)(sysCfg.pwm_period * 1000 / 45))
+				GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 1);
+			else
+			if (sysCfg.pwm_duty[LIGHT_GREEN] == 0)
+				GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
+			else {
+				pwm = 1;
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_GREEN], LIGHT_GREEN);
+			}
+
+			if (sysCfg.pwm_duty[LIGHT_BLUE] >= (int)(sysCfg.pwm_period * 1000 / 45))
+				GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 1);
+			else
+			if (sysCfg.pwm_duty[LIGHT_BLUE] == 0)
+				GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 0);
+			else {
+				pwm = 1;
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_BLUE], LIGHT_BLUE);
+			}
+
+			if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] >= (int)(sysCfg.pwm_period * 1000 / 45))
+				GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 1);
+			else
+			if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] == 0)
+				GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 0);
+			else {
+				pwm = 1;
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_COLD_WHITE], LIGHT_COLD_WHITE);
+			}
+
+			if (sysCfg.pwm_duty[LIGHT_WARM_WHITE] >= (int)(sysCfg.pwm_period * 1000 / 45))
+				GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 1);
+			else
+			if (sysCfg.pwm_duty[LIGHT_WARM_WHITE] == 0)
+				GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 0);
+			else {
+				pwm = 1;
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_WARM_WHITE], LIGHT_WARM_WHITE);
+			}
+
+			if (pwm) _pwm_start(); else _pwm_stop();
+		}
+		CFG_Save();
+		mqttSendSettings(args);
+	} else
+	if (os_strcmp(topicBuf, MQTT_TOPIC_PERIOD) == 0)
+	{
+		setPeriod(atoi(dataBuf), 1);
+		mqttSendSettings(args);
+	} else
+	if (os_strcmp(topicBuf, MQTT_TOPIC_ALL) == 0)
+	{
+		sysCfg.pwm_duty[LIGHT_RED] = atoi(dataBuf);
+		sysCfg.pwm_duty[LIGHT_GREEN] = atoi(dataBuf);
+		sysCfg.pwm_duty[LIGHT_BLUE] = atoi(dataBuf);
+		sysCfg.pwm_duty[LIGHT_COLD_WHITE] = atoi(dataBuf);
+		sysCfg.pwm_duty[LIGHT_WARM_WHITE] = atoi(dataBuf);
+		if (sysCfg.power)
+		{
 			if (sysCfg.pwm_duty[LIGHT_RED] >= (int)(sysCfg.pwm_period * 1000 / 45)) {
 				_pwm_stop();
 				GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 1);
@@ -178,42 +252,6 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 				_pwm_start();
 			}
 		}
-	} else
-	if (os_strcmp(topicBuf, MQTT_TOPIC_PERIOD) == 0)
-	{
-		setPeriod(atoi(dataBuf), 1);
-		mqttSendSettings(args);
-	} else
-	if (os_strcmp(topicBuf, MQTT_TOPIC_ALL) == 0)
-	{
-		sysCfg.pwm_duty[LIGHT_RED] = atoi(dataBuf);
-		sysCfg.pwm_duty[LIGHT_GREEN] = atoi(dataBuf);
-		sysCfg.pwm_duty[LIGHT_BLUE] = atoi(dataBuf);
-		sysCfg.pwm_duty[LIGHT_COLD_WHITE] = atoi(dataBuf);
-		sysCfg.pwm_duty[LIGHT_WARM_WHITE] = atoi(dataBuf);
-		if (sysCfg.pwm_duty[LIGHT_RED] >= (int)(sysCfg.pwm_period * 1000 / 45)) {
-			_pwm_stop();
-			GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 1);
-			GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 1);
-			GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 1);
-			GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 1);
-			GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 1);
-		} else
-		if (sysCfg.pwm_duty[LIGHT_RED] == 0) {
-			_pwm_stop();
-			GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 0);
-			GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
-			GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 0);
-			GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 0);
-			GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 0);
-		} else {
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_RED], LIGHT_RED);
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_GREEN], LIGHT_GREEN);
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_BLUE], LIGHT_BLUE);
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_COLD_WHITE], LIGHT_COLD_WHITE);
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_WARM_WHITE], LIGHT_WARM_WHITE);
-			_pwm_start();
-		}
 		CFG_Save();
 		mqttSendSettings(args);
 	} else
@@ -222,22 +260,25 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 		sysCfg.pwm_duty[LIGHT_RED] = atoi(dataBuf);
 		sysCfg.pwm_duty[LIGHT_GREEN] = atoi(dataBuf);
 		sysCfg.pwm_duty[LIGHT_BLUE] = atoi(dataBuf);
-		if (sysCfg.pwm_duty[LIGHT_RED] >= (int)(sysCfg.pwm_period * 1000 / 45)) {
-			_pwm_stop();
-			GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 1);
-			GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 1);
-			GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 1);
-		} else
-		if (sysCfg.pwm_duty[LIGHT_RED] == 0) {
-			_pwm_stop();
-			GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 0);
-			GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
-			GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 0);
-		} else {
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_RED], LIGHT_RED);
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_GREEN], LIGHT_GREEN);
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_BLUE], LIGHT_BLUE);
-			_pwm_start();
+		if (sysCfg.power)
+		{
+			if (sysCfg.pwm_duty[LIGHT_RED] >= (int)(sysCfg.pwm_period * 1000 / 45)) {
+				_pwm_stop();
+				GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 1);
+				GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 1);
+				GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 1);
+			} else
+			if (sysCfg.pwm_duty[LIGHT_RED] == 0) {
+				_pwm_stop();
+				GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 0);
+				GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
+				GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 0);
+			} else {
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_RED], LIGHT_RED);
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_GREEN], LIGHT_GREEN);
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_BLUE], LIGHT_BLUE);
+				_pwm_start();
+			}
 		}
 		CFG_Save();
 		mqttSendSettings(args);
@@ -246,19 +287,22 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 	{
 		sysCfg.pwm_duty[LIGHT_COLD_WHITE] = atoi(dataBuf);
 		sysCfg.pwm_duty[LIGHT_WARM_WHITE] = atoi(dataBuf);
-		if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] >= (int)(sysCfg.pwm_period * 1000 / 45)) {
-			_pwm_stop();
-			GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 1);
-			GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 1);
-		} else
-		if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] == 0) {
-			_pwm_stop();
-			GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 0);
-			GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 0);
-		} else {
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_COLD_WHITE], LIGHT_COLD_WHITE);
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_WARM_WHITE], LIGHT_WARM_WHITE);
-			_pwm_start();
+		if (sysCfg.power)
+		{
+			if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] >= (int)(sysCfg.pwm_period * 1000 / 45)) {
+				_pwm_stop();
+				GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 1);
+				GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 1);
+			} else
+			if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] == 0) {
+				_pwm_stop();
+				GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 0);
+				GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 0);
+			} else {
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_COLD_WHITE], LIGHT_COLD_WHITE);
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_WARM_WHITE], LIGHT_WARM_WHITE);
+				_pwm_start();
+			}
 		}
 		CFG_Save();
 		mqttSendSettings(args);
@@ -279,57 +323,60 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 		if (os_strcmp(topicBuf, MQTT_TOPIC_COLD_WHITE) == 0) sysCfg.pwm_duty[LIGHT_COLD_WHITE] = atoi(dataBuf);
 		if (os_strcmp(topicBuf, MQTT_TOPIC_WARM_WHITE) == 0) sysCfg.pwm_duty[LIGHT_WARM_WHITE] = atoi(dataBuf);
 
-		if (sysCfg.pwm_duty[LIGHT_RED] >= (int)(sysCfg.pwm_period * 1000 / 45))
-			GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 1);
-		else
-		if (sysCfg.pwm_duty[LIGHT_RED] == 0)
-			GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 0);
-		else {
-			pwm = 1;
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_RED], LIGHT_RED);
-		}
+		if (sysCfg.power)
+		{
+			if (sysCfg.pwm_duty[LIGHT_RED] >= (int)(sysCfg.pwm_period * 1000 / 45))
+				GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 1);
+			else
+			if (sysCfg.pwm_duty[LIGHT_RED] == 0)
+				GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 0);
+			else {
+				pwm = 1;
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_RED], LIGHT_RED);
+			}
 
-		if (sysCfg.pwm_duty[LIGHT_GREEN] >= (int)(sysCfg.pwm_period * 1000 / 45))
-			GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 1);
-		else
-		if (sysCfg.pwm_duty[LIGHT_GREEN] == 0)
-			GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
-		else {
-			pwm = 1;
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_GREEN], LIGHT_GREEN);
-		}
+			if (sysCfg.pwm_duty[LIGHT_GREEN] >= (int)(sysCfg.pwm_period * 1000 / 45))
+				GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 1);
+			else
+			if (sysCfg.pwm_duty[LIGHT_GREEN] == 0)
+				GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
+			else {
+				pwm = 1;
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_GREEN], LIGHT_GREEN);
+			}
 
-		if (sysCfg.pwm_duty[LIGHT_BLUE] >= (int)(sysCfg.pwm_period * 1000 / 45))
-			GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 1);
-		else
-		if (sysCfg.pwm_duty[LIGHT_BLUE] == 0)
-			GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 0);
-		else {
-			pwm = 1;
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_BLUE], LIGHT_BLUE);
-		}
+			if (sysCfg.pwm_duty[LIGHT_BLUE] >= (int)(sysCfg.pwm_period * 1000 / 45))
+				GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 1);
+			else
+			if (sysCfg.pwm_duty[LIGHT_BLUE] == 0)
+				GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 0);
+			else {
+				pwm = 1;
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_BLUE], LIGHT_BLUE);
+			}
 
-		if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] >= (int)(sysCfg.pwm_period * 1000 / 45))
-			GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 1);
-		else
-		if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] == 0)
-			GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 0);
-		else {
-			pwm = 1;
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_COLD_WHITE], LIGHT_COLD_WHITE);
-		}
+			if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] >= (int)(sysCfg.pwm_period * 1000 / 45))
+				GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 1);
+			else
+			if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] == 0)
+				GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 0);
+			else {
+				pwm = 1;
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_COLD_WHITE], LIGHT_COLD_WHITE);
+			}
 
-		if (sysCfg.pwm_duty[LIGHT_WARM_WHITE] >= (int)(sysCfg.pwm_period * 1000 / 45))
-			GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 1);
-		else
-		if (sysCfg.pwm_duty[LIGHT_WARM_WHITE] == 0)
-			GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 0);
-		else {
-			pwm = 1;
-			pwm_set_duty(sysCfg.pwm_duty[LIGHT_WARM_WHITE], LIGHT_WARM_WHITE);
-		}
+			if (sysCfg.pwm_duty[LIGHT_WARM_WHITE] >= (int)(sysCfg.pwm_period * 1000 / 45))
+				GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 1);
+			else
+			if (sysCfg.pwm_duty[LIGHT_WARM_WHITE] == 0)
+				GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 0);
+			else {
+				pwm = 1;
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_WARM_WHITE], LIGHT_WARM_WHITE);
+			}
 
-		if (pwm) _pwm_start(); else _pwm_stop();
+			if (pwm) _pwm_start(); else _pwm_stop();
+		}
 
 		CFG_Save();
 		mqttSendSettings(args);

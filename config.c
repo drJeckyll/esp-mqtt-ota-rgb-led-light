@@ -102,6 +102,8 @@ CFG_Load()
 
 		uint32 a[] = {0, 0, 0, 0, 0};
 
+		sysCfg.power = 0;
+
 		sysCfg.pwm_period = PWM_PERIOD;
 		os_memcpy(sysCfg.pwm_duty, a, sizeof(sysCfg.pwm_duty));
 

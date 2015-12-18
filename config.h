@@ -47,6 +47,8 @@ typedef struct{
 	uint32_t mqtt_keepalive;
 	uint8_t security;
 
+	uint32_t power;
+
 	// pwm
 	uint32 pwm_period;
     uint32 pwm_duty[PWM_CHANNEL];

@@ -75,6 +75,8 @@ void mqttConnectedCb(uint32_t *args)
 	MQTT_Client* client = (MQTT_Client*)args;
 	INFO("MQTT: Connected\r\n");
 
+	MQTT_Subscribe(client, MQTT_TOPIC_POWER, 0);
+
 	MQTT_Subscribe(client, MQTT_TOPIC_PERIOD, 0);
 
 	MQTT_Subscribe(client, MQTT_TOPIC_ALL, 0);
@@ -99,7 +101,8 @@ void mqttSendSettings(uint32_t *args)
 
 	char buff[100] = "";
 
-	os_sprintf(buff, "{\"r\":%d,\"g\":%d,\"b\":%d,\"cw\":%d,\"ww\":%d,\"p\":%d,\"pwm\":%d,\"rom\":%d,\"device\":\"%s\"}",
+	os_sprintf(buff, "{\"power\":%d,\"r\":%d,\"g\":%d,\"b\":%d,\"cw\":%d,\"ww\":%d,\"p\":%d,\"pwm\":%d,\"rom\":%d,\"device\":\"%s\"}",
+		sysCfg.power,
 		sysCfg.pwm_duty[LIGHT_RED],
 		sysCfg.pwm_duty[LIGHT_GREEN],
 		sysCfg.pwm_duty[LIGHT_BLUE],
@@ -140,6 +143,42 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 
 	INFO("Receive topic: %s, data: %s\r\n", topicBuf, dataBuf);
 
+	if (os_strcmp(topicBuf, MQTT_TOPIC_POWER) == 0)
+	{
+		if (atoi(dataBuf) == 0)
+		{
+			_pwm_stop();
+			GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 0);
+			GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
+			GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 0);
+			GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 0);
+			GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 0);
+		} else {
+			if (sysCfg.pwm_duty[LIGHT_RED] >= (int)(sysCfg.pwm_period * 1000 / 45)) {
+				_pwm_stop();
+				GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 1);
+				GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 1);
+				GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 1);
+				GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 1);
+				GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 1);
+			} else
+			if (sysCfg.pwm_duty[LIGHT_RED] == 0) {
+				_pwm_stop();
+				GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 0);
+				GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
+				GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 0);
+				GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 0);
+				GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 0);
+			} else {
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_RED], LIGHT_RED);
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_GREEN], LIGHT_GREEN);
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_BLUE], LIGHT_BLUE);
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_COLD_WHITE], LIGHT_COLD_WHITE);
+				pwm_set_duty(sysCfg.pwm_duty[LIGHT_WARM_WHITE], LIGHT_WARM_WHITE);
+				_pwm_start();
+			}
+		}
+	} else
 	if (os_strcmp(topicBuf, MQTT_TOPIC_PERIOD) == 0)
 	{
 		setPeriod(atoi(dataBuf), 1);

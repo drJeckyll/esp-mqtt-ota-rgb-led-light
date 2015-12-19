@@ -45,7 +45,7 @@ SAVE_FLAG saveFlag;
 void ICACHE_FLASH_ATTR
 CFG_Save()
 {
-	 spi_flash_read((CFG_LOCATION + 3) * SPI_FLASH_SEC_SIZE,
+	spi_flash_read((CFG_LOCATION + 3) * SPI_FLASH_SEC_SIZE,
 	                   (uint32 *)&saveFlag, sizeof(SAVE_FLAG));
 
 	if (saveFlag.flag == 0) {
@@ -96,7 +96,7 @@ CFG_Load()
 		os_sprintf(sysCfg.mqtt_user, "%s", MQTT_USER);
 		os_sprintf(sysCfg.mqtt_pass, "%s", MQTT_PASS);
 
-		sysCfg.security = DEFAULT_SECURITY;	/* default non ssl */
+		sysCfg.security = MQTT_SECURITY;
 
 		sysCfg.mqtt_keepalive = MQTT_KEEPALIVE;
 

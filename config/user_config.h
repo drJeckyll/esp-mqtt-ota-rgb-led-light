@@ -1,17 +1,17 @@
 #ifndef _USER_CONFIG_H_
 #define _USER_CONFIG_H_
 
-#define CFG_HOLDER	0x00FF55A1	/* Change this value to load default configurations */
+#define CFG_HOLDER	0x00FF55A2	/* Change this value to load default configurations */
 //#define CFG_LOCATION 0x7e		/* After first rom - you can use this or next one */
 #define CFG_LOCATION 0xfc		/* After second rom - this will be aresed with blank4.bin after flashing */
-
-//#define CLIENT_SSL_ENABLE
 
 #define MQTT_RECONNECT_TIMEOUT 	5	/*second*/
 #define MQTT_BUF_SIZE		1024
 #define MQTT_KEEPALIVE		120	 /*second*/
-#define DEFAULT_SECURITY	0
 #define QUEUE_BUFFER_SIZE		 		2048
+
+/* for SSL */
+#define CLIENT_SSL_ENABLE
 
 #define MQTT_TOPIC_POWER			MQTT_PREFIX"power"
 #define MQTT_TOPIC_PERIOD			MQTT_PREFIX"period"
@@ -29,8 +29,8 @@
 
 #define MQTT_TOPIC_UPDATE			MQTT_PREFIX"update"
 
-#define PROTOCOL_NAMEv31	/*MQTT version 3.1 compatible with Mosquitto v0.15*/
-//#define PROTOCOL_NAMEv311			/*MQTT version 3.11 compatible with https://eclipse.org/paho/clients/testing/*/
+//#define PROTOCOL_NAMEv31	/*MQTT version 3.1 compatible with Mosquitto v0.15*/
+#define PROTOCOL_NAMEv311			/*MQTT version 3.11 compatible with https://eclipse.org/paho/clients/testing/*/
 
 // PWM levels
 #define PWM_DEPTH 255

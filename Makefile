@@ -24,6 +24,7 @@ MQTT_PORT ?= 1883
 MQTT_CLIENT_ID ?= $(DEVICE)
 MQTT_USER ?= ""
 MQTT_PASS ?= ""
+MQTT_SECURITY ?= 0
 MQTT_PREFIX ?= "/"
 # OTA
 OTA_HOST ?= ""
@@ -81,6 +82,7 @@ CFLAGS += -DMQTT_PORT=$(MQTT_PORT)
 CFLAGS += -DMQTT_CLIENT_ID=\"$(MQTT_CLIENT_ID)\"
 CFLAGS += -DMQTT_USER=\"$(MQTT_USER)\"
 CFLAGS += -DMQTT_PASS=\"$(MQTT_PASS)\"
+CFLAGS += -DMQTT_SECURITY=$(MQTT_SECURITY)
 CFLAGS += -DMQTT_PREFIX=\"$(MQTT_PREFIX)\"
 
 CFLAGS += -DOTA_HOST=\"$(OTA_HOST)\"
@@ -137,7 +139,7 @@ showbuild:
 	@echo "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-"
 	@echo "This build is for device: $(DEVICE)"
 	@echo "WIFI: SSID \"$(WIFI_SSID)\", PASS \"$(WIFI_PASS)\""
-	@echo "MQTT: HOST \"$(MQTT_HOST)\", PORT \"$(MQTT_PORT)\", CLIENT_ID \"$(MQTT_CLIENT_ID)\", USER \"$(MQTT_USER)\", PASS \"$(MQTT_PASS)\", PREFIX \"$(MQTT_PREFIX)\""
+	@echo "MQTT: HOST \"$(MQTT_HOST)\", PORT \"$(MQTT_PORT)\", CLIENT_ID \"$(MQTT_CLIENT_ID)\", USER \"$(MQTT_USER)\", PASS \"$(MQTT_PASS)\", SECURITY \"$(MQTT_SECURITY)\", PREFIX \"$(MQTT_PREFIX)\""
 	@echo "OTA: HOST \"$(OTA_HOST)\", PORT \"$(OTA_PORT)\", PATH \"$(OTA_PATH)\""
 	@echo "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-"
 

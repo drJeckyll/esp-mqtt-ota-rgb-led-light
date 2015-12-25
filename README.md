@@ -25,9 +25,11 @@ MQTT_PREFIX"cw"     - Cool White
 MQTT_PREFIX"ww"     - Warm White
 ```
 
-Settings are saved after each change. When device is rebooted settings are restored. After each change you will recive new settings via MQTT_PREFIX"settings/reply" topic in JSON format. To get settings just send something to MQTT_PREFIX"settings"
+Settings are saved after each change. When device is rebooted settings are restored. After each change and after restart you will recive new settings via MQTT_PREFIX"settings/reply" topic in JSON format. To get settings just send something to MQTT_PREFIX"settings"
 
 When all colors are set to 0 or max, PWM will be turned OFF. In every other case PWM will be ON. This is ESP8266 PWM limitation. Max can be calculated like this: period * 1000 / 45. When you change period it will change max.
+
+To reboot ESP8266 just send something to MQTT_PREFIX"restart".
 
 To perform OTA update, first compile rom0.bin and rom1.bin. Put them on web server which can be accessed by http://OTA_HOST:OTA_PORT/OTA_PATH. For example:
 ```

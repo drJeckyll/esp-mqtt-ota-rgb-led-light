@@ -70,7 +70,6 @@ CFG_Save()
 void ICACHE_FLASH_ATTR
 CFG_Load()
 {
-
 	INFO("\r\nLoad config...\r\n");
 	spi_flash_read((CFG_LOCATION + 3) * SPI_FLASH_SEC_SIZE,
 				   (uint32 *)&saveFlag, sizeof(SAVE_FLAG));
@@ -81,7 +80,9 @@ CFG_Load()
 		spi_flash_read((CFG_LOCATION + 1) * SPI_FLASH_SEC_SIZE,
 					   (uint32 *)&sysCfg, sizeof(SYSCFG));
 	}
-	if(sysCfg.cfg_holder != CFG_HOLDER){
+
+	if (sysCfg.cfg_holder != CFG_HOLDER)
+	{
 		os_memset(&sysCfg, 0x00, sizeof sysCfg);
 
 		sysCfg.cfg_holder = CFG_HOLDER;
@@ -107,7 +108,7 @@ CFG_Load()
 		sysCfg.pwm_period = PWM_PERIOD;
 		os_memcpy(sysCfg.pwm_duty, a, sizeof(sysCfg.pwm_duty));
 
-		INFO(" default configuration\r\n");
+		INFO("default configuration\r\n");
 
 		CFG_Save();
 	}

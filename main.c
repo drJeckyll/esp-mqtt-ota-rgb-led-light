@@ -23,10 +23,15 @@
 #define FRC1_ENABLE_TIMER BIT7
 int in_pwm = 0;
 
+MQTT_Client mqttClient;
+
 void _pwm_stop()
 {
-	in_pwm = 0;
-	RTC_CLR_REG_MASK(FRC1_CTRL_ADDRESS, FRC1_ENABLE_TIMER);
+	if (in_pwm)
+	{
+		in_pwm = 0;
+		RTC_CLR_REG_MASK(FRC1_CTRL_ADDRESS, FRC1_ENABLE_TIMER);
+	}
 }
 
 void _pwm_start()
@@ -40,26 +45,17 @@ void _pwm_start()
 		                        {PWM_4_OUT_IO_MUX, PWM_4_OUT_IO_FUNC, PWM_4_OUT_IO_NUM},
 		                      };
 
-		/*PIN FUNCTION INIT FOR PWM OUTPUT*/
+		/* PIN FUNCTION INIT FOR PWM OUTPUT */
 		pwm_init(sysCfg.pwm_period, sysCfg.pwm_duty, PWM_CHANNEL, io_info);
 
 		set_pwm_debug_en(0); //disable debug print in pwm driver
-		INFO("PWM version : %08x\r\n",get_pwm_version());		
+		INFO("PWM version : %08x\r\n", get_pwm_version());
 	}
+
 	in_pwm = 1;
+	pwm_set_period(sysCfg.pwm_period);
 	pwm_start();
 }
-
-void setPeriod(uint32_t value, uint32_t save)
-{
-	sysCfg.pwm_period = value;
-	if ((sysCfg.pwm_period < 1000) || (sysCfg.pwm_period > 10000)) sysCfg.pwm_period = 1000;
-	pwm_set_period(sysCfg.pwm_period);
-	_pwm_start();
-	if (save) CFG_Save();
-}
-
-MQTT_Client mqttClient;
 
 void wifiConnectCb(uint8_t status)
 {
@@ -93,6 +89,10 @@ void mqttConnectedCb(uint32_t *args)
 	MQTT_Subscribe(client, MQTT_TOPIC_SETTINGS, 0);
 
 	MQTT_Subscribe(client, MQTT_TOPIC_UPDATE, 0);
+
+	MQTT_Subscribe(client, MQTT_TOPIC_RESTART, 0);
+
+	mqttSendSettings(args);
 }
 
 void mqttSendSettings(uint32_t *args)
@@ -216,7 +216,10 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 	} else
 	if (os_strcmp(topicBuf, MQTT_TOPIC_PERIOD) == 0)
 	{
-		setPeriod(atoi(dataBuf), 1);
+		sysCfg.pwm_period = atoi(dataBuf);
+		if ((sysCfg.pwm_period < 1000) || (sysCfg.pwm_period > 10000)) sysCfg.pwm_period = 1000;
+		_pwm_start();
+		CFG_Save();
 		mqttSendSettings(args);
 	} else
 	if (os_strcmp(topicBuf, MQTT_TOPIC_ALL) == 0)
@@ -337,6 +340,7 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 
 			if (sysCfg.pwm_duty[LIGHT_GREEN] >= (int)(sysCfg.pwm_period * 1000 / 45))
 				GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 1);
+		
 			else
 			if (sysCfg.pwm_duty[LIGHT_GREEN] == 0)
 				GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
@@ -388,6 +392,10 @@ void mqttDataCb(uint32_t *args, const char* topic, uint32_t topic_len, const cha
 	if (os_strcmp(topicBuf, MQTT_TOPIC_UPDATE) == 0)
 	{
 		OtaUpdate();
+	} else
+	if (os_strcmp(topicBuf, MQTT_TOPIC_RESTART) == 0)
+	{
+		system_restart();
 	}
 
 	os_free(topicBuf);
@@ -398,68 +406,85 @@ void ICACHE_FLASH_ATTR
 user_light_init(void)
 {
 	uint32_t pwm = 0;
-	CFG_Load();
 
-	pwm_set_period(sysCfg.pwm_period);
+	// reset everything
+	if ((sysCfg.pwm_period < 1000) || (sysCfg.pwm_period > 10000)) sysCfg.pwm_period = 1000;
+	_pwm_start();
+	_pwm_stop();
+	GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 0);
+	GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
+	GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 0);
+	GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 0);
+	GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 0);
 
-	if (sysCfg.pwm_duty[LIGHT_RED] >= (int)(sysCfg.pwm_period * 1000 / 45))
-		GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 1);
-	else
-	if (sysCfg.pwm_duty[LIGHT_RED] == 0)
+	if (sysCfg.power)
+	{
+		if (sysCfg.pwm_duty[LIGHT_RED] >= (int)(sysCfg.pwm_period * 1000 / 45))
+			GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 1);
+		else
+		if (sysCfg.pwm_duty[LIGHT_RED] == 0)
+			GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 0);
+		else {
+			pwm = 1;
+			pwm_set_duty(sysCfg.pwm_duty[LIGHT_RED], LIGHT_RED);
+		}
+
+		if (sysCfg.pwm_duty[LIGHT_GREEN] >= (int)(sysCfg.pwm_period * 1000 / 45))
+			GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 1);
+		else
+		if (sysCfg.pwm_duty[LIGHT_GREEN] == 0)
+			GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
+		else {
+			pwm = 1;
+			pwm_set_duty(sysCfg.pwm_duty[LIGHT_GREEN], LIGHT_GREEN);
+		}
+
+		if (sysCfg.pwm_duty[LIGHT_BLUE] >= (int)(sysCfg.pwm_period * 1000 / 45))
+			GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 1);
+		else
+		if (sysCfg.pwm_duty[LIGHT_BLUE] == 0)
+			GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 0);
+		else {
+			pwm = 1;
+			pwm_set_duty(sysCfg.pwm_duty[LIGHT_BLUE], LIGHT_BLUE);
+		}
+
+		if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] >= (int)(sysCfg.pwm_period * 1000 / 45))
+			GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 1);
+		else
+		if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] == 0)
+			GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 0);
+		else {
+			pwm = 1;
+			pwm_set_duty(sysCfg.pwm_duty[LIGHT_COLD_WHITE], LIGHT_COLD_WHITE);
+		}
+
+		if (sysCfg.pwm_duty[LIGHT_WARM_WHITE] >= (int)(sysCfg.pwm_period * 1000 / 45))
+			GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 1);
+		else
+		if (sysCfg.pwm_duty[LIGHT_WARM_WHITE] == 0)
+			GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 0);
+		else {
+			pwm = 1;
+			pwm_set_duty(sysCfg.pwm_duty[LIGHT_WARM_WHITE], LIGHT_WARM_WHITE);
+		}
+
+		if (pwm) _pwm_start();
+	} else {
+		_pwm_stop();
 		GPIO_OUTPUT_SET(PWM_0_OUT_IO_NUM, 0);
-	else {
-		pwm = 1;
-		pwm_set_duty(sysCfg.pwm_duty[LIGHT_RED], LIGHT_RED);
-	}
-
-	if (sysCfg.pwm_duty[LIGHT_GREEN] >= (int)(sysCfg.pwm_period * 1000 / 45))
-		GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 1);
-	else
-	if (sysCfg.pwm_duty[LIGHT_GREEN] == 0)
 		GPIO_OUTPUT_SET(PWM_1_OUT_IO_NUM, 0);
-	else {
-		pwm = 1;
-		pwm_set_duty(sysCfg.pwm_duty[LIGHT_GREEN], LIGHT_GREEN);
-	}
-
-	if (sysCfg.pwm_duty[LIGHT_BLUE] >= (int)(sysCfg.pwm_period * 1000 / 45))
-		GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 1);
-	else
-	if (sysCfg.pwm_duty[LIGHT_BLUE] == 0)
 		GPIO_OUTPUT_SET(PWM_2_OUT_IO_NUM, 0);
-	else {
-		pwm = 1;
-		pwm_set_duty(sysCfg.pwm_duty[LIGHT_BLUE], LIGHT_BLUE);
-	}
-
-	if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] >= (int)(sysCfg.pwm_period * 1000 / 45))
-		GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 1);
-	else
-	if (sysCfg.pwm_duty[LIGHT_COLD_WHITE] == 0)
 		GPIO_OUTPUT_SET(PWM_3_OUT_IO_NUM, 0);
-	else {
-		pwm = 1;
-		pwm_set_duty(sysCfg.pwm_duty[LIGHT_COLD_WHITE], LIGHT_COLD_WHITE);
-	}
-
-	if (sysCfg.pwm_duty[LIGHT_WARM_WHITE] >= (int)(sysCfg.pwm_period * 1000 / 45))
-		GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 1);
-	else
-	if (sysCfg.pwm_duty[LIGHT_WARM_WHITE] == 0)
 		GPIO_OUTPUT_SET(PWM_4_OUT_IO_NUM, 0);
-	else {
-		pwm = 1;
-		pwm_set_duty(sysCfg.pwm_duty[LIGHT_WARM_WHITE], LIGHT_WARM_WHITE);
 	}
 
-	if (pwm) _pwm_start();
-
-    INFO("LIGHT PARAM: R: %d\r\n", sysCfg.pwm_duty[LIGHT_RED]);
-    INFO("LIGHT PARAM: G: %d\r\n", sysCfg.pwm_duty[LIGHT_GREEN]);
-    INFO("LIGHT PARAM: B: %d\r\n", sysCfg.pwm_duty[LIGHT_BLUE]);
-    INFO("LIGHT PARAM: CW: %d\r\n", sysCfg.pwm_duty[LIGHT_COLD_WHITE]);
-    INFO("LIGHT PARAM: WW: %d\r\n", sysCfg.pwm_duty[LIGHT_WARM_WHITE]);
-    INFO("LIGHT PARAM: P: %d\r\n", sysCfg.pwm_period);
+	INFO("LIGHT PARAM: R: %d\r\n", sysCfg.pwm_duty[LIGHT_RED]);
+	INFO("LIGHT PARAM: G: %d\r\n", sysCfg.pwm_duty[LIGHT_GREEN]);
+	INFO("LIGHT PARAM: B: %d\r\n", sysCfg.pwm_duty[LIGHT_BLUE]);
+	INFO("LIGHT PARAM: CW: %d\r\n", sysCfg.pwm_duty[LIGHT_COLD_WHITE]);
+	INFO("LIGHT PARAM: WW: %d\r\n", sysCfg.pwm_duty[LIGHT_WARM_WHITE]);
+	INFO("LIGHT PARAM: P: %d\r\n", sysCfg.pwm_period);
 }
 
 void ICACHE_FLASH_ATTR
@@ -469,9 +494,11 @@ user_init()
 	os_delay_us(1000000);
 
 	INFO("Starting up...\r\n");
-	
+
 	INFO("Loading config...\r\n");
 	CFG_Load();
+
+	gpio_init();
 
 	INFO("Initializing MQTT...\r\n");
 	MQTT_InitConnection(&mqttClient, sysCfg.mqtt_host, sysCfg.mqtt_port, sysCfg.security);
@@ -485,7 +512,7 @@ user_init()
 	WIFI_Connect(sysCfg.sta_ssid, sysCfg.sta_pwd, wifiConnectCb);
 
 	INFO("Init light...\r\n");
-	user_light_init();	
-	
+	user_light_init();
+
 	INFO("Startup completed. Now running from rom %d...\r\n", rboot_get_current_rom());
 }

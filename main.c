@@ -15,9 +15,9 @@
 #include "ota.h"
 #include "debug.h"
 
-#define led 2
-#define LOW 0
-#define HIGH 1
+//#define led 2
+//#define LOW 0
+//#define HIGH 1
 
 // next define is from hw_timer.h
 #define FRC1_ENABLE_TIMER BIT7
